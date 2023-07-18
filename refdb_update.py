@@ -210,7 +210,6 @@ gbff_list = ["https://ftp.ncbi.nlm.nih.gov/refseq/TargetedLoci/Fungi/fungi.ITS.g
              "https://ftp.ncbi.nlm.nih.gov/refseq/TargetedLoci/Archaea/archaea.16SrRNA.gbff.gz",
              "https://ftp.ncbi.nlm.nih.gov/refseq/TargetedLoci/Archaea/archaea.23SrRNA.gbff.gz",
              "https://ftp.ncbi.nlm.nih.gov/refseq/TargetedLoci/Archaea/archaea.5SrRNA.gbff.gz",
-             "https://ftp.ncbi.nlm.nih.gov/refseq/release/plastid/plastid.1.genomic.gbff.gz",
              ]
 
 refdb_path = f"./refdb/"
