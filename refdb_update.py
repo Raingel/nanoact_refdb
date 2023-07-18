@@ -222,7 +222,7 @@ for gbff_URI in gbff_list[-1:]:
     gbffgz_to_taxfas(gbff_path=gbff_path,
                            des = refdb_path
                             )
-    #os.remove(gbff_path)
+    os.remove(gbff_path)
 
 
 ##Build database from ncbi query
