@@ -143,7 +143,7 @@ def lineage_by_taxid( taxid=['3016022', '2888342'], tax_id_cache = f"./taxid_cac
     
     # Get taxon info by taxid
     taxid_info_URI = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&rettype=xml&id={}'.format(",".join(new_taxid))
-    retry = 3
+    retry = 4
     while True:
         try:
             r = get(taxid_info_URI)
@@ -151,7 +151,7 @@ def lineage_by_taxid( taxid=['3016022', '2888342'], tax_id_cache = f"./taxid_cac
             break
         except:
             print(taxid_info_URI)
-            print(r.text)
+            #print(r.text)
             if retry == 0:
                 return None
             retry -= 1
