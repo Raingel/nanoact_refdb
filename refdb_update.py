@@ -122,7 +122,7 @@ def gbff_reader(handle, gene = None):
             data = {}    
             gene_loc_tmp = ""
         line = handle.readline()
-def lineage_by_taxid( taxid=['3016022', '2888342']):
+def lineage_by_taxid( taxid=['3016022', '2888342'], tax_id_cache = f"./taxid_cache/taxid_cache.json"):
     #try load tax_id_cache from cache file
     ranks = {} 
     try:
@@ -184,7 +184,7 @@ def lineage_by_taxid( taxid=['3016022', '2888342']):
         print(r, e)
         pass
     #Save taxid info to cache
-    tax_id_cache = f"./taxid_cache/taxid_cache.json"
+    
     json.dump(taxid_json, open(tax_id_cache, 'w'))
     return ranks
 def _exec(cmd,suppress_output=True):
