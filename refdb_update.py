@@ -143,13 +143,18 @@ def lineage_by_taxid( taxid=['3016022', '2888342'], tax_id_cache = f"./taxid_cac
     
     # Get taxon info by taxid
     taxid_info_URI = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&rettype=xml&id={}'.format(",".join(new_taxid))
-    r = get(taxid_info_URI)
-    try:
-        r = xmltodict.parse(r.text)
-    except:
-        print(taxid_info_URI)
-        print(r.text)
-        return None
+    retry = 3
+    while True:
+        try:
+            r = get(taxid_info_URI)
+            r = xmltodict.parse(r.text)
+            break
+        except:
+            print(taxid_info_URI)
+            print(r.text)
+            if retry == 0:
+                return None
+            retry -= 1
     rank_base = {"kingdom":"incertae sedis", "phylum":"incertae sedis", "class":"incertae sedis", "order":"incertae sedis", "family":"incertae sedis", "genus":"incertae sedis"}
     try:
         
