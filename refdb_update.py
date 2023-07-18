@@ -253,8 +253,8 @@ def refdb_from_query(query="rbcL[Gene%20Name]%20AND%20plants[filter]%20AND%20bio
         with open(gbff_path, 'a') as f:
             f.write(r.text)
         print(f"{i}/{len(idlist)} processed...")
-        break
     gbffgz_to_taxfas(gbff_path, "./refdb", gene=gene)
+    os.remove(gbff_path)
 
 # %%
 #Download plant rbcL gene from refseq
