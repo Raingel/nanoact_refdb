@@ -211,10 +211,10 @@ gbff_list = ["https://ftp.ncbi.nlm.nih.gov/refseq/TargetedLoci/Fungi/fungi.ITS.g
              "https://ftp.ncbi.nlm.nih.gov/refseq/TargetedLoci/Archaea/archaea.23SrRNA.gbff.gz",
              "https://ftp.ncbi.nlm.nih.gov/refseq/TargetedLoci/Archaea/archaea.5SrRNA.gbff.gz",
              ]
-
 refdb_path = f"./refdb/"
+refdb_path = os.path.abspath(refdb_path)
 # %%
-for gbff_URI in gbff_list[-1:]:
+for gbff_URI in gbff_list[:]:
     gbff_path = gbffgz_download(gbff_URI=gbff_URI, 
                           des=refdb_path
                           )
@@ -252,6 +252,7 @@ def refdb_from_query(query="rbcL[Gene%20Name]%20AND%20plants[filter]%20AND%20bio
     gbffgz_to_taxfas(gbff_path, "./refdb", gene=gene)
 
 # %%
+#Download plant rbcL gene from refseq
 refdb_from_query(query="rbcL[Gene%20Name]%20AND%20plants[filter]%20AND%20biomol_genomic[PROP]%20AND%20srcdb_refseq[PROP]",
                      des ="./refdb",
                      name="plant_rbcl",
@@ -259,16 +260,16 @@ refdb_from_query(query="rbcL[Gene%20Name]%20AND%20plants[filter]%20AND%20biomol_
         
 # %%
 #Compress each taxonomic fasta file
-for tax in os.listdir(refdb_path):
-    if tax.endswith(".fas"):
-        print("Compressing "+tax)
-        _exec("gzip "+refdb_path+tax)
-        with open(refdb_path+tax, "rb") as f_in:
-            with gzip.open(refdb_path+tax+".gz", "wb") as f_out:
-                f_out.writelines(f_in)
-            f_out.close()
-        f_in.close()
-        os.remove(refdb_path+tax)
+for tax in os.scandir(refdb_path):
+    if tax.name.endswith(".fas"):
+        print("Compressing "+tax.name)
+        _exec(f"gzip {tax.path} -c > {tax.path}.gz")
+        #with open(refdb_path+tax.name, "rb") as f_in:
+        #    with gzip.open(refdb_path+tax.name+".gz", "wb") as f_out:
+        #        f_out.writelines(f_in)
+        #    f_out.close()
+        #f_in.close()
+        os.remove(tax.path)
 
 
 # %%
