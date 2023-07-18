@@ -1,7 +1,4 @@
 requests
-gzip
-os
-gzip
 json
 shutil
 xmltodict
