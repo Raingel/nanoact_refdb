@@ -213,8 +213,7 @@ gbff_list = ["https://ftp.ncbi.nlm.nih.gov/refseq/TargetedLoci/Fungi/fungi.ITS.g
              ]
 
 refdb_path = f"./refdb/"
-
-
+# %%
 for gbff_URI in gbff_list[-1:]:
     gbff_path = gbffgz_download(gbff_URI=gbff_URI, 
                           des=refdb_path
@@ -271,3 +270,5 @@ for tax in os.listdir(refdb_path):
         f_in.close()
         os.remove(refdb_path+tax)
 
+
+# %%
