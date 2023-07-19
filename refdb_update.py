@@ -63,7 +63,12 @@ def gbffgz_to_taxfas(gbff_path, des, gene=None):
                 lineage = ";".join(["Unclassified"]*6)
             title = "{}||{}||{}||{}".format(rec["accession"], rec["organism"], lineage, rec["taxid"])
             title = title.replace(" ", "_")
-            f.write(">{}\n{}\n".format(title, rec["seq"]))  
+            try:
+                f.write(">{}\n{}\n".format(title, rec["seq"]))  
+            except Exception as e:
+                print(rec)
+                print(e)
+                pass
     return f"{des}/{name}.fas"   
 #%%
 def reverse_complement(seq):
@@ -243,12 +248,12 @@ def refdb_from_query(query="rbcL[Gene%20Name]%20AND%20plants[filter]%20AND%20bio
                      name="plant_rbcl",
                      gene="rbcL"):
     #Download plant rbcl from refseq
-    URI = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?RetMax=30000&db=nucleotide&term={query}"
+    URI = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?RetMax=500000&db=nucleotide&term={query}"
     r = get(URI)
     r = xmltodict.parse(r.text)
     idlist = r["eSearchResult"]["IdList"]["Id"]
     print(f"{len(idlist)} records found")
-    batch = 150
+    batch = 200
     #Clear file
     gbff_path = f"{des}/{name}.gbff"
     with open(gbff_path, 'w') as f:
@@ -262,11 +267,11 @@ def refdb_from_query(query="rbcL[Gene%20Name]%20AND%20plants[filter]%20AND%20bio
             f.write(r.text)
         print(f"{i}/{len(idlist)} processed...")
     gbffgz_to_taxfas(gbff_path, "./refdb", gene=gene)
-    #os.remove(gbff_path)
+    os.remove(gbff_path)
 
 # %%
 #Download plant rbcL gene from refseq
-refdb_from_query(query="rbcL AND plants [filter] AND biomol_genomic [PROP] AND is _nuccore [filter]",
+refdb_from_query(query="rbcL AND plants [filter] AND biomol_genomic [PROP] AND is _nuccore [filter] 1000:3000[SLEN] ",
                      des ="./refdb",
                      name="plant_rbcl",
                      gene=None)
