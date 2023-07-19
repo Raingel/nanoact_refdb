@@ -36,7 +36,8 @@ def gbffgz_to_taxfas(gbff_path, des, gene=None):
     taxid_list = set()
     for rec in gbff_reader(open(gbff_path, 'r'), gene=gene):
         taxid_list.add(rec["taxid"])
-        print(f"{len(taxid_list)} taxid processed...", end="\r")
+        if len(taxid_list) % 1000 == 0:
+            print(f"{len(taxid_list)} taxid loaded...")
     #Show how many taxid to process
     print(f"{len(taxid_list)} taxid to process...")
     #Retrieve taxon info by taxid
@@ -232,7 +233,7 @@ gbff_list = ["https://ftp.ncbi.nlm.nih.gov/refseq/TargetedLoci/Fungi/fungi.ITS.g
 refdb_path = f"./refdb/"
 refdb_path = os.path.abspath(refdb_path)
 # %%
-for gbff_URI in gbff_list[:]:
+for gbff_URI in gbff_list[0:0]:
     gbff_path = gbffgz_download(gbff_URI=gbff_URI, 
                           des=refdb_path
                           )
@@ -256,6 +257,8 @@ def refdb_from_query(query="rbcL[Gene%20Name]%20AND%20plants[filter]%20AND%20bio
     batch = 200
     #Clear file
     gbff_path = f"{des}/{name}.gbff"
+    #Download sequences in batch
+    debug_count=100
     with open(gbff_path, 'w') as f:
         f.write("")
     for i in range(0, len(idlist), batch):
@@ -265,7 +268,10 @@ def refdb_from_query(query="rbcL[Gene%20Name]%20AND%20plants[filter]%20AND%20bio
         r = get(URI)
         with open(gbff_path, 'a') as f:
             f.write(r.text)
-        print(f"{i}/{len(idlist)} processed...")
+        print(f"{i+batch}/{len(idlist)} processed...")
+        debug_count -= 1
+        if debug_count == 0:
+            break
     gbffgz_to_taxfas(gbff_path, "./refdb", gene=gene)
     os.remove(gbff_path)
 
@@ -273,7 +279,7 @@ def refdb_from_query(query="rbcL[Gene%20Name]%20AND%20plants[filter]%20AND%20bio
 #Download plant rbcL gene from refseq
 refdb_from_query(query="rbcL AND plants [filter] AND biomol_genomic [PROP] AND is _nuccore [filter] 1000:3000[SLEN] ",
                      des ="./refdb",
-                     name="plant_rbcl",
+                     name="plant_rbcl100",
                      gene=None)
         
 # %%
