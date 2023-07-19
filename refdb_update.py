@@ -258,7 +258,7 @@ def refdb_from_query(query="rbcL[Gene%20Name]%20AND%20plants[filter]%20AND%20bio
     #Clear file
     gbff_path = f"{des}/{name}.gbff"
     #Download sequences in batch
-    debug_count=100
+    debug_count=1000
     with open(gbff_path, 'w') as f:
         f.write("")
     for i in range(0, len(idlist), batch):
