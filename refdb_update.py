@@ -271,7 +271,8 @@ def refdb_from_query(query="rbcL[Gene%20Name]%20AND%20plants[filter]%20AND%20bio
         print(f"{i+batch}/{len(idlist)} processed...")
         debug_count -= 1
         if debug_count == 0:
-            break
+            pass
+            #break
     gbffgz_to_taxfas(gbff_path, "./refdb", gene=gene)
     os.remove(gbff_path)
 
@@ -279,7 +280,7 @@ def refdb_from_query(query="rbcL[Gene%20Name]%20AND%20plants[filter]%20AND%20bio
 #Download plant rbcL gene from refseq
 refdb_from_query(query="rbcL AND plants [filter] AND biomol_genomic [PROP] AND is _nuccore [filter] 1000:3000[SLEN] ",
                      des ="./refdb",
-                     name="plant_rbcl100",
+                     name="plant_rbcl",
                      gene=None)
         
 # %%
