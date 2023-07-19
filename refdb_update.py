@@ -7,6 +7,7 @@ import json
 import shutil
 import xmltodict
 from subprocess import Popen, PIPE, run, check_output
+import time
 def gbffgz_download(gbff_URI, des):
     #URI = "https://ftp.ncbi.nlm.nih.gov/refseq/TargetedLoci/Fungi/fungi.ITS.gbff.gz"
     name = gbff_URI.split("/")[-1]
@@ -25,6 +26,7 @@ def gbffgz_download(gbff_URI, des):
         return f"{des}/{basename}"
     else:
         return f"{des}/{name}"
+#%%
 def gbffgz_to_taxfas(gbff_path, des, gene=None):
     name = gbff_path.split("/")[-1]
     name, _ = os.path.splitext(name)
@@ -32,11 +34,13 @@ def gbffgz_to_taxfas(gbff_path, des, gene=None):
     print("Getting taxinfo for each record...")
     taxinfos = {}
     taxid_list = set()
-    recs = list(gbff_reader(open(gbff_path, 'r'), gene=gene))
-    for rec in recs:
+    for rec in gbff_reader(open(gbff_path, 'r'), gene=gene):
         taxid_list.add(rec["taxid"])
-    #Retrieve taxon info by taxid, 100 taxids per request
-    batch = 100
+        print(f"{len(taxid_list)} taxid processed...", end="\r")
+    #Show how many taxid to process
+    print(f"{len(taxid_list)} taxid to process...")
+    #Retrieve taxon info by taxid
+    batch = 150
     for i in range(0, len(taxid_list), batch):
         taxinfo_batch = lineage_by_taxid(list(taxid_list)[i:i+batch])
         if taxinfo_batch != None:
@@ -52,7 +56,7 @@ def gbffgz_to_taxfas(gbff_path, des, gene=None):
     print(f"{len(taxinfos)}/{len(taxid_list)} taxid processed...")
     #write fasta
     with open(f"{des}/{name}.fas", 'w') as f:
-        for rec in recs:
+        for rec in gbff_reader(open(gbff_path, 'r'), gene=gene):
             try:
                 lineage = ";".join([taxinfos[rec["taxid"]][i] for i in ["kingdom", "phylum", "class", "order", "family", "genus"]])
             except Exception as e:
@@ -61,7 +65,7 @@ def gbffgz_to_taxfas(gbff_path, des, gene=None):
             title = title.replace(" ", "_")
             f.write(">{}\n{}\n".format(title, rec["seq"]))  
     return f"{des}/{name}.fas"   
-
+#%%
 def reverse_complement(seq):
     complement = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A', 
                   'N': 'N', 'R': 'Y', 'Y': 'R', 'S': 'S', 
@@ -72,8 +76,7 @@ def reverse_complement(seq):
                         'w': 'w', 'k': 'm', 'm': 'k', 'b': 'v',
                         'd': 'h', 'h': 'd', 'v': 'b', 'x': 'x'}
     return "".join([complement[base] for base in reversed(seq)])
-
-
+#%%
 def gbff_reader(handle, gene = None):
     line = handle.readline()
     data = {}
@@ -95,6 +98,7 @@ def gbff_reader(handle, gene = None):
                 if gene_name == gene and gene_loc_tmp != "":
                     #Save gene location
                     data['gene_loc'] = gene_loc_tmp
+                    #print(f"gene found for {data['accession']}")
         if line.startswith("ORIGIN"):
             line = handle.readline()
             seq = ""
@@ -108,20 +112,22 @@ def gbff_reader(handle, gene = None):
                 if "gene_loc" in data:
                     #Extract the gene sequence
                     if "complement" in data["gene_loc"]:
-                        gene_loc = data["gene_loc"].replace("complement(", "").replace(")", "").split("..")
+                        gene_loc = data["gene_loc"].replace("complement(", "").replace(")", "").replace(">","").replace("<","").split("..")
                         data['seq'] = reverse_complement(data["seq"][int(gene_loc[0])-1:int(gene_loc[1])])
                     else:
-                        gene_loc = data["gene_loc"].split("..")
+                        gene_loc = data["gene_loc"].replace(">", "").replace("<","").split("..")
                         data['seq'] = data["seq"][int(gene_loc[0])-1:int(gene_loc[1])]
                 else:
                     #If this record does not contain the gene we want, skip it
                     data = {}
                     gene_loc_tmp = ""
+                    line = handle.readline()
                     continue
             yield data
             data = {}    
             gene_loc_tmp = ""
         line = handle.readline()
+#%%
 def lineage_by_taxid( taxid=['3016022', '2888342'], tax_id_cache = f"./taxid_cache/taxid_cache.json"):
     #try load tax_id_cache from cache file
     ranks = {} 
@@ -145,12 +151,14 @@ def lineage_by_taxid( taxid=['3016022', '2888342'], tax_id_cache = f"./taxid_cac
     taxid_info_URI = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&rettype=xml&id={}'.format(",".join(new_taxid))
     retry = 4
     while True:
+        #Wait for 1 second before retry
+        time.sleep(1)
         try:
             r = get(taxid_info_URI)
             r = xmltodict.parse(r.text)
             break
-        except:
-            print(taxid_info_URI)
+        except Exception as e:
+            print(taxid_info_URI,e)
             #print(r.text)
             if retry == 0:
                 return None
@@ -228,7 +236,7 @@ for gbff_URI in gbff_list[:]:
                             )
     os.remove(gbff_path)
 
-
+# %%
 ##Build database from ncbi query
 def refdb_from_query(query="rbcL[Gene%20Name]%20AND%20plants[filter]%20AND%20biomol_genomic[PROP]%20AND%20srcdb_refseq[PROP]",
                      des ="./refdb",
@@ -240,7 +248,7 @@ def refdb_from_query(query="rbcL[Gene%20Name]%20AND%20plants[filter]%20AND%20bio
     r = xmltodict.parse(r.text)
     idlist = r["eSearchResult"]["IdList"]["Id"]
     print(f"{len(idlist)} records found")
-    batch = 100
+    batch = 150
     #Clear file
     gbff_path = f"{des}/{name}.gbff"
     with open(gbff_path, 'w') as f:
@@ -254,14 +262,14 @@ def refdb_from_query(query="rbcL[Gene%20Name]%20AND%20plants[filter]%20AND%20bio
             f.write(r.text)
         print(f"{i}/{len(idlist)} processed...")
     gbffgz_to_taxfas(gbff_path, "./refdb", gene=gene)
-    os.remove(gbff_path)
+    #os.remove(gbff_path)
 
 # %%
 #Download plant rbcL gene from refseq
-refdb_from_query(query="rbcL[Gene%20Name]%20AND%20plants[filter]%20AND%20biomol_genomic[PROP]%20AND%20srcdb_refseq[PROP]",
+refdb_from_query(query="rbcL AND plants [filter] AND biomol_genomic [PROP] AND is _nuccore [filter]",
                      des ="./refdb",
                      name="plant_rbcl",
-                     gene="rbcL")
+                     gene=None)
         
 # %%
 #Compress each taxonomic fasta file
