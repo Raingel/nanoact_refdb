@@ -8,6 +8,12 @@ import shutil
 import xmltodict
 from subprocess import Popen, PIPE, run, check_output
 import time
+import argparse
+#%%
+argparser = argparse.ArgumentParser(description='Update refdb')
+argparser.add_argument('-db', '--database', help='Database to update', default="refseq")
+arg, _ = argparser.parse_known_args()
+#%%
 def gbffgz_download(gbff_URI, des):
     #URI = "https://ftp.ncbi.nlm.nih.gov/refseq/TargetedLoci/Fungi/fungi.ITS.gbff.gz"
     name = gbff_URI.split("/")[-1]
@@ -233,14 +239,15 @@ gbff_list = ["https://ftp.ncbi.nlm.nih.gov/refseq/TargetedLoci/Fungi/fungi.ITS.g
 refdb_path = f"./refdb/"
 refdb_path = os.path.abspath(refdb_path)
 # %%
-for gbff_URI in gbff_list[0:0]:
-    gbff_path = gbffgz_download(gbff_URI=gbff_URI, 
-                          des=refdb_path
-                          )
-    gbffgz_to_taxfas(gbff_path=gbff_path,
-                           des = refdb_path
+if arg.database == "refseq":
+    for gbff_URI in gbff_list[:]:
+        gbff_path = gbffgz_download(gbff_URI=gbff_URI, 
+                            des=refdb_path
                             )
-    os.remove(gbff_path)
+        gbffgz_to_taxfas(gbff_path=gbff_path,
+                            des = refdb_path
+                                )
+        os.remove(gbff_path)
 
 # %%
 ##Build database from ncbi query
@@ -278,11 +285,12 @@ def refdb_from_query(query="rbcL[Gene%20Name]%20AND%20plants[filter]%20AND%20bio
 
 # %%
 #Download plant rbcL gene from refseq
-refdb_from_query(query="rbcL AND plants [filter] AND biomol_genomic [PROP] AND is _nuccore [filter] 1000:3000[SLEN] ",
-                     des ="./refdb",
-                     name="plant_rbcl",
-                     gene=None)
-        
+if arg.database == "plant_rbcl":
+    refdb_from_query(query="rbcL AND plants [filter] AND biomol_genomic [PROP] AND is _nuccore [filter] 1000:3000[SLEN] ",
+                        des ="./refdb",
+                        name="plant_rbcl",
+                        gene=None)
+            
 # %%
 #Compress each taxonomic fasta file
 for tax in os.scandir(refdb_path):
