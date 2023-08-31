@@ -254,14 +254,14 @@ if arg.database == "refseq":
 def refdb_from_query(query="rbcL[Gene%20Name]%20AND%20plants[filter]%20AND%20biomol_genomic[PROP]%20AND%20srcdb_refseq[PROP]",
                      des ="./refdb",
                      name="plant_rbcl",
-                     gene="rbcL"):
+                     gene="rbcL",
+                     batch = 200):
     #Download plant rbcl from refseq
     URI = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?RetMax=500000&db=nucleotide&term={query}"
     r = get(URI)
     r = xmltodict.parse(r.text)
     idlist = r["eSearchResult"]["IdList"]["Id"]
     print(f"{len(idlist)} records found")
-    batch = 200
     #Clear file
     gbff_path = f"{des}/{name}.gbff"
     #Download sequences in batch
@@ -285,12 +285,19 @@ def refdb_from_query(query="rbcL[Gene%20Name]%20AND%20plants[filter]%20AND%20bio
 
 # %%
 #Download plant rbcL gene from refseq
-if arg.database == "plant_rbcl":
+if arg.database == "plant_rbcl": #79058 records
     refdb_from_query(query="rbcL AND plants [filter] AND biomol_genomic [PROP] AND is _nuccore [filter] 1000:3000[SLEN] ",
                         des ="./refdb",
                         name="plant_rbcl",
                         gene=None)
-            
+
+# %%
+#Download plant rbcL gene from refseq
+if arg.database == "nr_basidiomycota_ITS":
+    refdb_from_query(query="ITS1 AND Basidiomycota[Organism] AND biomol_genomic [PROP] AND is _nuccore [filter] 300:1000[SLEN]",
+                        des ="./refdb",
+                        name="nr_basidiomycota_ITS",
+                        gene=None)   
 # %%
 #Compress each taxonomic fasta file
 for tax in os.scandir(refdb_path):
