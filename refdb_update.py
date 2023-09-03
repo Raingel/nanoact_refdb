@@ -1,5 +1,5 @@
 #%%
-from requests import get
+from requests import get, Session
 import gzip
 import os
 import gzip
@@ -9,6 +9,7 @@ import xmltodict
 from subprocess import Popen, PIPE, run, check_output
 import time
 import argparse
+import re
 #%%
 argparser = argparse.ArgumentParser(description='Update refdb')
 argparser.add_argument('-db', '--database', help='Database to update', default="refseq")
@@ -250,39 +251,82 @@ if arg.database == "refseq":
         os.remove(gbff_path)
 
 # %%
+#Download query result from ncbi
+def gbff_from_query(query="internal transcribed spacer AND Olpidium[Organism] AND biomol_genomic [PROP] AND is _nuccore [filter] 300:1000[SLEN]",
+                    gbff_path = "./refdb/nr_Olpidium.ITS.gbff"):
+    URI = f"https://www.ncbi.nlm.nih.gov/nuccore/?term={query}"
+    print(URI)
+    session = Session()
+    #Query ncbi
+    query = session.get(URI)
+    #save cookie
+    cookies = query.cookies
+    #Get ncbi_phid
+    ncbi_phid = re.findall(r"ncbi_phid=(\w+)\"", query.text)[0]
+    print(f"ncbi_phid:{ncbi_phid}")
+    #Get gbff
+    if ncbi_phid == None:
+        print("ncbi_phid not found")
+    else:
+        print("ncbi_phid found")
+        response = session.get(f"https://www.ncbi.nlm.nih.gov/sviewer/viewer.cgi?tool=portal&save=file&log$=seqview&db=nuccore&report=gbwithparts&query_key=1&filter=all&extrafeat=undefined&withparts=on&ncbi_phid={ncbi_phid}",
+                               cookies=cookies,
+                               stream=True
+                               )
+        with open(gbff_path, 'wb') as f:
+            downloaded = 0
+            for chunk in response.iter_content(chunk_size=1024*10):
+                if chunk:
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    print(f"Downloaded {downloaded/1024/1024} MB", end="\r")
+
+
+    return None
+
+#%%
 ##Build database from ncbi query
 def refdb_from_query(query="rbcL[Gene%20Name]%20AND%20plants[filter]%20AND%20biomol_genomic[PROP]%20AND%20srcdb_refseq[PROP]",
                      des ="./refdb",
                      name="plant_rbcl",
                      gene="rbcL",
-                     batch = 200):
+                     batch = 200,
+                     split_per_seq = 50000
+                     ):
     #Download plant rbcl from refseq
-    URI = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?RetMax=500000&db=nucleotide&term={query}"
+    URI = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?RetMax=900000&db=nucleotide&term={query}"
     r = get(URI)
     r = xmltodict.parse(r.text)
     idlist = r["eSearchResult"]["IdList"]["Id"]
-    print(f"{len(idlist)} records found")
-    #Clear file
-    gbff_path = f"{des}/{name}.gbff"
-    #Download sequences in batch
-    debug_count=1000
-    with open(gbff_path, 'w') as f:
-        f.write("")
-    for i in range(0, len(idlist), batch):
-        idlist_batch = idlist[i:i+batch]
-        idlist_batch = ",".join(idlist_batch)
-        URI = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&rettype=gb&id={idlist_batch}"
-        r = get(URI)
-        with open(gbff_path, 'a') as f:
-            f.write(r.text)
-        print(f"{i+batch}/{len(idlist)} processed...")
-        debug_count -= 1
-        if debug_count == 0:
-            pass
-            #break
-    gbffgz_to_taxfas(gbff_path, "./refdb", gene=gene)
-    os.remove(gbff_path)
-
+    id_no = len(idlist)
+    print(f"{id_no} records found")
+    #Split idlist into files
+    splits = 0
+    split_count = 0
+    while splits < len(idlist):
+        print(f"Split {split_count}/{int(len(idlist)/split_per_seq)}")
+        idlist_split = idlist[splits:splits+split_per_seq]
+        gbff_path = f"{des}/{name}_{split_count}.gbff"
+        #Download sequences in batch
+        debug_count=1000
+        with open(gbff_path, 'w') as f:
+            f.write("")
+            for i in range(0, len(idlist_split), batch):
+                idlist_batch = idlist_split[i:i+batch]
+                idlist_batch = ",".join(idlist_batch)
+                URI = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nucleotide&rettype=gb&id={idlist_batch}"
+                r = get(URI)
+                with open(gbff_path, 'a') as f:
+                    f.write(r.text)
+                print(f"{i+batch}/{len(idlist_split)} processed...")
+                debug_count -= 1
+                if debug_count == 0:
+                    pass
+                    #break
+            gbffgz_to_taxfas(gbff_path, "./refdb", gene=gene)
+            os.remove(gbff_path)
+        splits += split_per_seq
+        split_count += 1
 # %%
 #Download plant rbcL gene from refseq
 if arg.database == "plant_rbcl": #79058 records
@@ -291,6 +335,14 @@ if arg.database == "plant_rbcl": #79058 records
                         name="plant_rbcl",
                         gene=None)
 
+if arg.database == "plant_rbcl_new":
+    #Download gbff
+    gbff_from_query(query="rbcL[Gene%20Name]%20AND%20plants[filter]%20AND%20biomol_genomic[PROP]%20AND%20srcdb_refseq[PROP]",
+                    gbff_path = "./refdb/plant_rbcl.gbff")
+    #Convert gbff to fasta
+    gbffgz_to_taxfas(gbff_path="./refdb/plant_rbcl.gbff",
+                        des = "./refdb",
+                        gene="rbcL")
 # %%
 #Download plant rbcL gene from refseq
 if arg.database == "nr_basidiomycota_ITS":
@@ -298,6 +350,16 @@ if arg.database == "nr_basidiomycota_ITS":
                         des ="./refdb",
                         name="nr_basidiomycota_ITS",
                         gene=None)   
+if arg.database == "nr_ascomycota_ITS":
+    refdb_from_query(query="internal transcribed spacer AND Ascomycota[Organism] AND biomol_genomic [PROP] AND is _nuccore [filter] 300:1000[SLEN]",
+                        des ="./refdb",
+                        name="nr_ascomycota_ITS",
+                        gene=None)   
+if arg.database == "nr_oomycota_ITS":
+    refdb_from_query(query="ITS1 AND Oomycota[Organism] AND biomol_genomic [PROP] AND is _nuccore [filter] 300:1000[SLEN]",
+                        des ="./refdb",
+                        name="nr_oomycota_ITS",
+                        gene=None)
 # %%
 #Compress each taxonomic fasta file
 for tax in os.scandir(refdb_path):
