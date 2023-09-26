@@ -1,4 +1,4 @@
-name: refdb_update
+name: db_update_ascomycota
 
 on:
   schedule:
