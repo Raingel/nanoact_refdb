@@ -360,6 +360,12 @@ if arg.database == "nr_oomycota_ITS":
                         des ="./refdb",
                         name="nr_oomycota_ITS",
                         gene=None)
+    
+if arg.database == "nr_plant_ITS":
+    refdb_from_query(query="ITS1 AND Embryophyta[Organism] AND biomol_genomic [PROP] AND is _nuccore [filter] 300:1000[SLEN]",
+                        des ="./refdb",
+                        name="nr_plant_ITS",
+                        gene=None)
 # %%
 #Compress each taxonomic fasta file
 for tax in os.scandir(refdb_path):
