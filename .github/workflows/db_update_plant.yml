@@ -1,4 +1,4 @@
-name: db_update_ascomycota
+name: db_update_plant
 
 on:
   schedule:
